@@ -8,13 +8,13 @@ service KvStoreService {
   // Create a new store
   rpc CreateStore (CreateStoreRequest) returns (CreateStoreResponse);
   
-  // Store a matrix with a given key
+  // Store a value with a given key
   rpc Put (PutRequest) returns (PutResponse);
   
-  // Retrieve a matrix by key
+  // Retrieve a value by key
   rpc Get (GetRequest) returns (GetResponse);
   
-  // Delete a matrix by key
+  // Delete a value by key
   rpc Delete (DeleteRequest) returns (DeleteResponse);
   
   // List all available keys
@@ -56,7 +56,7 @@ enum DataType {
     BOOL = 15;
 }
 
-// Matrix representation
+// Data representation
 message Value {
   repeated uint64 shape = 1;
   DataType dtype = 2;
@@ -65,25 +65,25 @@ message Value {
   repeated bytes data = 5;
 }
 
-// Store matrix request
+// Store request
 message PutRequest {
   uint64 key = 1;
   Value value = 2;
 }
 
-// Store matrix response
+// Store response
 message PutResponse {
   uint64 key = 1;
   bool success = 2;
   string message = 3;
 }
 
-// Get matrix request
+// Get request
 message GetRequest {
   uint64 key = 1;
 }
 
-// Get matrix response
+// Get response
 message GetResponse {
   uint64 key = 1;
   optional Value value = 2;
@@ -91,12 +91,12 @@ message GetResponse {
   string message = 4;
 }
 
-// Delete matrix request
+// Delete request
 message DeleteRequest {
   uint64 key = 1;
 }
 
-// Delete matrix response
+// Delete response
 message DeleteResponse {
   uint64 key = 1;
   bool success = 2;

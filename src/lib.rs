@@ -8,7 +8,7 @@ pub mod grpc_server;
 pub mod grpc_client;
 
 // Include the generated protobuf types
-use grpc_server::kvstore::{Value, DataType};
+use grpc_server::kvstore::Value;
 
 #[derive(Debug, Clone)]
 pub struct RocksDBStore {
@@ -210,33 +210,43 @@ impl Default for KVStore {
 
 #[test]
 fn test_kv_store_operations() {
+    use rand::Rng;
+    use sha2::{Sha256, Digest};
+    use grpc_server::kvstore::DataType;
+
     let temp_dir = std::env::temp_dir().join(format!("kvstore_test_{}", uuid::Uuid::new_v4()));
     let store = KVStore::new(&temp_dir).unwrap();
-    let key = 12345u64;
-    let value = Value {
-        shape: vec![2, 2],
-        dtype: DataType::Fp64 as i32,
-        size_check: 16,
-        key_check: key,
-        data: vec![vec![1, 2, 3, 4, 5, 6, 7, 8]],
-    };
-
-    // Test insert and get
-    assert!(store.put(key, value.clone()).unwrap().is_none());
-    let got = store.get(&key).unwrap();
-    assert!(got.is_some());
-    let got_value = got.unwrap();
-    assert_eq!(got_value.shape, value.shape);
-    assert_eq!(got_value.dtype, value.dtype);
-
-    // Test contains_key
-    assert!(store.contains_key(&key).unwrap());
-
-    // Test delete
-    let deleted = store.delete(&key).unwrap();
-    assert!(deleted.is_some());
-    let deleted_value = deleted.unwrap();
-    assert_eq!(deleted_value.shape, value.shape);
-    assert!(!store.contains_key(&key).unwrap());
+    let mut rng = rand::thread_rng();
+    let mut keys_and_hashes = Vec::new();
+    for i in 0..1000 {
+        let key = rng.gen_range(0..1000000);
+        let shape = vec![rng.gen_range(1..100), rng.gen_range(1..100)];
+        let dtype = DataType::Fp64; 
+        let size_check = shape.iter().product::<u64>() * 8; // FP64 is 8 bytes
+        let key_check = key;
+        let data = vec![vec![rng.gen_range(0..1000000) as u8; 8]]; // Create proper data structure
+        let data_hash = sha2::Sha256::digest(&data[0]);
+        
+        let value = Value {
+            shape,
+            dtype: dtype as i32,
+            size_check,
+            key_check,
+            data,
+        };
+        
+        store.put(key, value).unwrap();
+        keys_and_hashes.push((key, data_hash));
+        println!("iter: {}, key: {}, size_check: {}, key_check: {}, data_hash: {:?}", i, key, size_check, key_check, data_hash);
+    }
+    for (key, data_hash) in keys_and_hashes {
+        let value = store.get(&key).unwrap();
+        assert!(value.is_some());
+        let value = value.unwrap();
+        let got_data_hash = sha2::Sha256::digest(&value.data[0]);
+        assert_eq!(data_hash, got_data_hash);
+    }
+    store.clear().unwrap();
+    assert!(store.is_empty().unwrap());
 }
 
