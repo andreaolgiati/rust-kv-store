@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package kvstore;
+
+// The KV Store service definition
+service KvStoreService {
+
+  // Create a new store
+  rpc CreateStore (CreateStoreRequest) returns (CreateStoreResponse);
+  
+  // Store a matrix with a given key
+  rpc Put (PutRequest) returns (PutResponse);
+  
+  // Retrieve a matrix by key
+  rpc Get (GetRequest) returns (GetResponse);
+  
+  // Delete a matrix by key
+  rpc Delete (DeleteRequest) returns (DeleteResponse);
+  
+  // List all available keys
+  rpc List (ListRequest) returns (ListResponse);
+  
+  // Health check endpoint
+  rpc Health (HealthRequest) returns (HealthResponse);
+}
+
+// Create store request
+message CreateStoreRequest {
+  string name = 1;
+  uint64 position = 2;
+  uint64 range = 3;
+}
+
+// Create store response
+message CreateStoreResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+enum DataType {
+    FP1 = 0;
+    FP2 = 1;
+    FP4 = 2;
+    FP8 = 3;
+    BF16 = 4;
+    FP16 = 5;
+    FP32 = 6;
+    FP64 = 7;
+    INT1 = 8;
+    INT2 = 9;
+    INT4 = 10;
+    INT8 = 11;
+    INT16 = 12;
+    INT32 = 13;
+    INT64 = 14;
+    BOOL = 15;
+}
+
+// Matrix representation
+message Value {
+  repeated uint64 shape = 1;
+  DataType dtype = 2;
+  uint64 size_check = 3;
+  uint64 key_check = 4;
+  repeated bytes data = 5;
+}
+
+// Store matrix request
+message PutRequest {
+  uint64 key = 1;
+  Value value = 2;
+}
+
+// Store matrix response
+message PutResponse {
+  uint64 key = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Get matrix request
+message GetRequest {
+  uint64 key = 1;
+}
+
+// Get matrix response
+message GetResponse {
+  uint64 key = 1;
+  optional Value value = 2;
+  bool success = 3;
+  string message = 4;
+}
+
+// Delete matrix request
+message DeleteRequest {
+  uint64 key = 1;
+}
+
+// Delete matrix response
+message DeleteResponse {
+  uint64 key = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// List keys request
+message ListRequest {
+  // Empty request
+}
+
+// List keys response
+message ListResponse {
+  repeated uint64 keys = 1;
+  uint32 count = 2;
+  bool success = 3;
+}
+
+// Health check request
+message HealthRequest {
+  // Empty request
+}
+
+// Health check response
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+} 

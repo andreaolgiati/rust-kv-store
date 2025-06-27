@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use anyhow::Result;
-use rust_kv_store::{KVStore, server};
-use tracing::{info, error};
+use rust_kv_store::KVStore;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -10,17 +10,23 @@ async fn main() -> Result<()> {
     
     info!("Starting Rust KV Store server...");
     
-    // Create the KV store
-    let store = Arc::new(KVStore::new());
+    let prefix = std::env::var("DATA_DIR_PREFIX").unwrap_or_else(|_| "./data".to_string());
+
+    // Create a new unique data directory under prefix
+    let data_dir = format!("{}/{}", prefix, uuid::Uuid::new_v4());
+    std::fs::create_dir_all(&data_dir)?;
+
+    // Create the KV store (RocksDB)
+    let _store = Arc::new(KVStore::new(&data_dir)?);
     
-    // Create the server
-    let app = server::create_server(store).await?;
+    // For now, just print that the store is created
+    // TODO: Add HTTP server implementation
+    info!("KV Store created successfully at {}", data_dir);
+    info!("Store is ready for use");
     
-    // Start the server
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
-    info!("Server listening on http://127.0.0.1:3000");
-    
-    axum::serve(listener, app).await?;
+    // Keep the process running
+    tokio::signal::ctrl_c().await?;
+    info!("Shutting down...");
     
     Ok(())
 } 
