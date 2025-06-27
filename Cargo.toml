@@ -26,6 +26,7 @@ prost = "0.12"
 # Storage dependencies
 rocksdb = "0.21"
 sha2 = "0.10"
+hex = "0.4"
 
 [build-dependencies]
 tonic-build = "0.10" 

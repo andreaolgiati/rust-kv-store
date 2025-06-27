@@ -211,21 +211,27 @@ impl Default for KVStore {
 #[test]
 fn test_kv_store_operations() {
     use rand::Rng;
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest};
     use grpc_server::kvstore::DataType;
-
+    use std::collections::HashSet;
     let temp_dir = std::env::temp_dir().join(format!("kvstore_test_{}", uuid::Uuid::new_v4()));
     let store = KVStore::new(&temp_dir).unwrap();
     let mut rng = rand::thread_rng();
     let mut keys_and_hashes = Vec::new();
-    for i in 0..1000 {
-        let key = rng.gen_range(0..1000000);
-        let shape = vec![rng.gen_range(1..100), rng.gen_range(1..100)];
+    let mut keys_so_far = HashSet::new();
+    for i in 0..100000 {
+        let mut key = rng.gen_range(0..1000000);
+        while keys_so_far.contains(&key) {
+            key = rng.gen_range(0..1000000);
+        }
+        keys_so_far.insert(key);
+        let shape = vec![rng.gen_range(1..10), rng.gen_range(1..10)];
         let dtype = DataType::Fp64; 
         let size_check = shape.iter().product::<u64>() * 8; // FP64 is 8 bytes
         let key_check = key;
         let data = vec![vec![rng.gen_range(0..1000000) as u8; 8]]; // Create proper data structure
-        let data_hash = sha2::Sha256::digest(&data[0]);
+        let data_hash: [u8; 32] = sha2::Sha256::digest(&data[0]).into();
+       
         
         let value = Value {
             shape,
@@ -237,14 +243,15 @@ fn test_kv_store_operations() {
         
         store.put(key, value).unwrap();
         keys_and_hashes.push((key, data_hash));
-        println!("iter: {}, key: {}, size_check: {}, key_check: {}, data_hash: {:?}", i, key, size_check, key_check, data_hash);
+        let data_hash_str = hex::encode(data_hash);
+        println!("iter: {}, key: {}, size_check: {}, key_check: {}, data_hash: {:?}", i, key, size_check, key_check, data_hash_str);
     }
     for (key, data_hash) in keys_and_hashes {
         let value = store.get(&key).unwrap();
         assert!(value.is_some());
         let value = value.unwrap();
-        let got_data_hash = sha2::Sha256::digest(&value.data[0]);
-        assert_eq!(data_hash, got_data_hash);
+        let got_data_hash: [u8; 32] = sha2::Sha256::digest(&value.data[0]).into();
+        assert_eq!(data_hash, got_data_hash, "key: {}, data_hash: {:?}, got_data_hash: {:?}", key, data_hash, got_data_hash);
     }
     store.clear().unwrap();
     assert!(store.is_empty().unwrap());
